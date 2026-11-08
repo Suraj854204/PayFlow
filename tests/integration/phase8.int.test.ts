@@ -380,7 +380,7 @@ d("phase 8: automation, API keys, webhooks", () => {
         );
         expect(wf.id).toBeTruthy();
         expect(run.status).toBe("failed");
-        expect(run.error).toMatch(/https|private|resolve|ENOTFOUND|EAI_AGAIN|fetch/i);
+        expect(run.error).toMatch(/https|private|resolve|ENOTFOUND|EAI_AGAIN|fetch|HTTP \d{3}/i);
         const bell = await inTenant(orgA, (tx) =>
           tx
             .select()

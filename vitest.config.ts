@@ -12,6 +12,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Webhook deliveries time out after 10 s, and CI runners have real (sometimes unroutable) networks.
+    testTimeout: 30_000,
     include: [
       "src/**/*.test.{ts,tsx}",
       "tests/unit/**/*.test.{ts,tsx}",
