@@ -1,0 +1,252 @@
+import {
+  Award,
+  Fingerprint,
+  SlidersHorizontal,
+  MessageSquareHeart,
+  LayoutDashboard,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Building2,
+  KeyRound,
+  Users,
+  Network,
+  Wallet,
+  Rocket,
+  Banknote,
+  CalendarCheck,
+  Plane,
+  Receipt,
+  Landmark,
+  BarChart3,
+  FileText,
+  BookOpen,
+  ScanText,
+  PenLine,
+  Workflow,
+  Calculator,
+  HandCoins,
+  LineChart,
+  Code2,
+  type LucideIcon,
+} from "lucide-react";
+import type { Permission } from "@/lib/rbac";
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  /** Item is shown only when the role has at least one of these permissions. Empty = everyone. */
+  anyOf?: Permission[];
+  group: "Workspace" | "Admin";
+}
+
+/** Single source of truth for navigation, the command palette, and breadcrumbs. */
+export const NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Workspace" },
+  {
+    label: "Employees",
+    href: "/employees",
+    icon: Users,
+    anyOf: ["employees:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Org chart",
+    href: "/org-chart",
+    icon: Network,
+    anyOf: ["employees:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Salary structures",
+    href: "/salary",
+    icon: Wallet,
+    anyOf: ["salary:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Payroll",
+    href: "/payroll",
+    icon: Banknote,
+    anyOf: ["payroll:read"],
+    group: "Workspace",
+  },
+  {
+    label: "My payslips",
+    href: "/payslips",
+    icon: FileText,
+    anyOf: ["payslips:read_own"],
+    group: "Workspace",
+  },
+  {
+    label: "Attendance",
+    href: "/attendance",
+    icon: CalendarCheck,
+    anyOf: ["attendance:read_own", "attendance:read_team", "attendance:manage"],
+    group: "Workspace",
+  },
+  {
+    label: "Leave",
+    href: "/leave",
+    icon: Plane,
+    anyOf: ["leave:apply", "leave:approve", "leave:manage"],
+    group: "Workspace",
+  },
+  {
+    label: "Expenses",
+    href: "/expenses",
+    icon: Receipt,
+    anyOf: ["expenses:submit", "expenses:approve"],
+    group: "Workspace",
+  },
+  {
+    label: "Tax declarations",
+    href: "/tax",
+    icon: Landmark,
+    anyOf: ["tax:read_own", "tax:manage"],
+    group: "Workspace",
+  },
+  {
+    label: "What-if simulator",
+    href: "/simulator",
+    icon: Calculator,
+    group: "Workspace",
+  },
+  {
+    label: "Recognition",
+    href: "/recognition",
+    icon: Award,
+    anyOf: ["recognition:give"],
+    group: "Workspace",
+  },
+  {
+    label: "Pulse surveys",
+    href: "/surveys",
+    icon: MessageSquareHeart,
+    group: "Workspace",
+  },
+  {
+    label: "Earned wage access",
+    href: "/ewa",
+    icon: HandCoins,
+    anyOf: ["ewa:request", "ewa:manage"],
+    group: "Workspace",
+  },
+  {
+    label: "Compliance",
+    href: "/compliance",
+    icon: Landmark,
+    anyOf: ["tax:manage", "payroll:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Policies",
+    href: "/policies",
+    icon: BookOpen,
+    anyOf: ["policies:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Documents",
+    href: "/documents",
+    icon: ScanText,
+    anyOf: ["employees:write"],
+    group: "Admin",
+  },
+  {
+    label: "Generators",
+    href: "/generators",
+    icon: PenLine,
+    anyOf: ["employees:write", "announcements:manage"],
+    group: "Admin",
+  },
+  {
+    label: "People analytics",
+    href: "/analytics",
+    icon: LineChart,
+    anyOf: ["payroll:read", "salary:read", "employees:read_team"],
+    group: "Workspace",
+  },
+  {
+    label: "Reports",
+    href: "/reports",
+    icon: BarChart3,
+    anyOf: ["reports:read"],
+    group: "Workspace",
+  },
+  {
+    label: "Automations",
+    href: "/workflows",
+    icon: Workflow,
+    anyOf: ["workflows:manage"],
+    group: "Admin",
+  },
+  {
+    label: "Developers",
+    href: "/developers",
+    icon: Code2,
+    anyOf: ["apikeys:manage"],
+    group: "Admin",
+  },
+  { label: "Company setup", href: "/setup", icon: Rocket, anyOf: ["org:manage"], group: "Admin" },
+  { label: "Audit log", href: "/audit", icon: ScrollText, anyOf: ["audit:read"], group: "Admin" },
+  {
+    label: "Company profile",
+    href: "/settings/company",
+    icon: Building2,
+    anyOf: ["org:manage"],
+    group: "Admin",
+  },
+  {
+    label: "Roles & permissions",
+    href: "/settings/roles",
+    icon: ShieldCheck,
+    anyOf: ["settings:manage", "members:read"],
+    group: "Admin",
+  },
+  {
+    label: "Enterprise settings",
+    href: "/settings/enterprise",
+    icon: SlidersHorizontal,
+    anyOf: ["org:manage"],
+    group: "Admin",
+  },
+  { label: "Security", href: "/settings/security", icon: KeyRound, group: "Workspace" },
+  { label: "My data & privacy", href: "/privacy", icon: Fingerprint, group: "Workspace" },
+];
+
+export const SETTINGS_ICON = Settings;
+
+export const BREADCRUMB_LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
+  employees: "Employees",
+  "org-chart": "Org chart",
+  salary: "Salary structures",
+  setup: "Company setup",
+  new: "New",
+  edit: "Edit",
+  audit: "Audit log",
+  settings: "Settings",
+  company: "Company profile",
+  roles: "Roles & permissions",
+  security: "Security",
+  workflows: "Automations",
+  pipeline: "Automatic payroll",
+  developers: "Developers",
+  simulator: "What-if simulator",
+  ewa: "Earned wage access",
+  recognition: "Recognition",
+  surveys: "Pulse surveys",
+  privacy: "My data & privacy",
+  enterprise: "Enterprise settings",
+  analytics: "People analytics",
+};
+
+/** What to call an id segment, based on the section it sits in. */
+export const ID_LABELS: Record<string, string> = {
+  employees: "Profile",
+  workflows: "Edit",
+  payroll: "Run",
+  policies: "Policy",
+};

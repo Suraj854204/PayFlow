@@ -1,0 +1,110 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SKIP_ENV_VALIDATION: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
+  BETTER_AUTH_URL: http://localhost:3000
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  OWNER_URL: postgresql://payflow:payflow@localhost:5432/payflow
+  APP_URL: postgresql://app_user:x@localhost:5432/payflow
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: payflow, POSTGRES_PASSWORD: payflow, POSTGRES_DB: payflow }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U payflow" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://app_user:x@localhost:5432/payflow
+      TEST_DATABASE_URL: postgresql://app_user:x@localhost:5432/payflow
+      TEST_DATABASE_OWNER_URL: postgresql://payflow:payflow@localhost:5432/payflow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Dependency audit (production, high and above)
+        # Known, documented exceptions are listed in README "Security". Fails on anything new.
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Apply migrations and RLS, create the non-owner app role
+        run: |
+          for f in drizzle/0*.sql; do sed 's/--> statement-breakpoint//' "$f" | psql "$OWNER_URL" -v ON_ERROR_STOP=1 -q -f -; done
+          psql "$OWNER_URL" -v ON_ERROR_STOP=1 -q -f drizzle/rls.sql
+          psql "$OWNER_URL" -v ON_ERROR_STOP=1 -q \
+            -c "create role app_user login password 'x' nosuperuser nobypassrls" \
+            -c "grant usage on schema public to app_user" \
+            -c "grant select,insert,update,delete on all tables in schema public to app_user" \
+            -c "grant usage,select on all sequences in schema public to app_user" \
+            -c "grant execute on all functions in schema public to app_user"
+      - name: Tests with coverage (thresholds enforced by vitest.config.ts)
+        run: npm run test:coverage
+      - run: npm run build
+      - name: Seed demo data and run browser smoke tests
+        run: |
+          DATABASE_URL="$OWNER_URL" NODE_OPTIONS=--conditions=react-server npx tsx scripts/seed.ts --reset
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+          (npx next start -p 3100 > next.log 2>&1 &)
+          npx --yes wait-on -t 60000 http://localhost:3100/api/health
+          node tests/e2e/phase9-smoke.mjs
+        env:
+          BETTER_AUTH_URL: http://localhost:3100
+          NEXT_PUBLIC_APP_URL: http://localhost:3100
+          CRON_SECRET: cron_test_secret_123
+          ALLOW_PRIVATE_WEBHOOKS: "1"
+          RAZORPAY_WEBHOOK_SECRET: ci-webhook-secret
+          E2E_DATABASE_URL: postgresql://payflow:payflow@localhost:5432/payflow
+      - name: Lighthouse CI (public pages)
+        run: |
+          pkill -f next-server || true
+          (npx next start -p 3000 &)
+          npx --yes wait-on -t 60000 http://localhost:3000/api/health
+          npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            coverage
+            .lighthouseci
+          if-no-files-found: ignore
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: docker build -t payflow:ci .
+      - name: Image boots and answers its health check
+        run: |
+          docker run -d --name pf -p 3000:3000 \
+            -e DATABASE_URL=postgresql://x:x@127.0.0.1:5432/x \
+            -e BETTER_AUTH_SECRET=ci-secret-ci-secret-ci-secret-ci-secret \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
+            -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+            -e ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+            payflow:ci
+          # No database is attached, so the endpoint reports 503 "degraded"; a JSON body proves the server is up.
+          for i in $(seq 1 30); do curl -s localhost:3000/api/health | grep -q '"status"' && exit 0; sleep 2; done
+          docker logs pf; exit 1

@@ -1,0 +1,2 @@
+process.env.SKIP_ENV_VALIDATION = "true";
+process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";

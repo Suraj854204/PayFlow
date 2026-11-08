@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: oklch(0.99 0.002 270);
+  --foreground: oklch(0.18 0.02 270);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 270);
+  --muted: oklch(0.96 0.005 270);
+  --muted-foreground: oklch(0.48 0.02 270);
+  --border: oklch(0.92 0.006 270);
+  --input: oklch(0.92 0.006 270);
+  --ring: oklch(0.58 0.2 277);
+  --primary: oklch(0.55 0.22 277);
+  --primary-foreground: oklch(0.99 0 0);
+  --accent: oklch(0.96 0.02 277);
+  --accent-foreground: oklch(0.35 0.15 277);
+  --destructive: oklch(0.58 0.22 25);
+  --success: oklch(0.65 0.17 155);
+  --warning: oklch(0.78 0.16 75);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.145 0.012 270);
+  --foreground: oklch(0.96 0.005 270);
+  --card: oklch(0.185 0.014 270);
+  --card-foreground: oklch(0.96 0.005 270);
+  --muted: oklch(0.225 0.014 270);
+  --muted-foreground: oklch(0.72 0.02 270);
+  --border: oklch(0.28 0.016 270);
+  --input: oklch(0.3 0.016 270);
+  --ring: oklch(0.68 0.19 277);
+  --primary: oklch(0.68 0.19 277);
+  --primary-foreground: oklch(0.14 0.02 270);
+  --accent: oklch(0.26 0.05 277);
+  --accent-foreground: oklch(0.9 0.05 277);
+  --destructive: oklch(0.68 0.2 25);
+  --success: oklch(0.74 0.17 155);
+  --warning: oklch(0.82 0.15 80);
+}
+
+/* Personal accent colours: swap the primary hue without touching anything else. */
+[data-accent="teal"] {
+  --primary: oklch(0.55 0.12 190);
+  --ring: oklch(0.58 0.12 190);
+  --accent: oklch(0.96 0.025 190);
+  --accent-foreground: oklch(0.35 0.12 190);
+}
+[data-accent="teal"].dark {
+  --primary: oklch(0.7 0.13 190);
+  --ring: oklch(0.7 0.13 190);
+  --accent: oklch(0.27 0.05 190);
+  --accent-foreground: oklch(0.9 0.06 190);
+}
+
+[data-accent="rose"] {
+  --primary: oklch(0.55 0.2 15);
+  --ring: oklch(0.58 0.2 15);
+  --accent: oklch(0.96 0.025 15);
+  --accent-foreground: oklch(0.35 0.12 15);
+}
+[data-accent="rose"].dark {
+  --primary: oklch(0.7 0.18 15);
+  --ring: oklch(0.7 0.18 15);
+  --accent: oklch(0.27 0.05 15);
+  --accent-foreground: oklch(0.9 0.06 15);
+}
+
+[data-accent="amber"] {
+  --primary: oklch(0.55 0.15 65);
+  --ring: oklch(0.58 0.15 65);
+  --accent: oklch(0.96 0.025 65);
+  --accent-foreground: oklch(0.35 0.12 65);
+}
+[data-accent="amber"].dark {
+  --primary: oklch(0.7 0.15 65);
+  --ring: oklch(0.7 0.15 65);
+  --accent: oklch(0.27 0.05 65);
+  --accent-foreground: oklch(0.9 0.06 65);
+}
+
+[data-accent="emerald"] {
+  --primary: oklch(0.55 0.14 155);
+  --ring: oklch(0.58 0.14 155);
+  --accent: oklch(0.96 0.025 155);
+  --accent-foreground: oklch(0.35 0.12 155);
+}
+[data-accent="emerald"].dark {
+  --primary: oklch(0.7 0.15 155);
+  --ring: oklch(0.7 0.15 155);
+  --accent: oklch(0.27 0.05 155);
+  --accent-foreground: oklch(0.9 0.06 155);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+.bg-mesh {
+  background-image:
+    radial-gradient(
+      60% 50% at 15% 10%,
+      color-mix(in oklab, var(--primary) 28%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(50% 45% at 85% 5%, oklch(0.7 0.18 330 / 0.22), transparent 70%),
+    radial-gradient(45% 40% at 60% 90%, oklch(0.75 0.14 200 / 0.18), transparent 70%);
+}
+
+.glass {
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
