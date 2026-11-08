@@ -351,6 +351,8 @@ try {
       "payflow.demo",
     ),
   );
+  // Sign-in is limited to 3 per 10 s per address; earlier steps signed in several times.
+  await new Promise((r) => setTimeout(r, 11_000));
   const anon = await newCtx();
   const ap = await pageOf(anon);
   await ap.goto(`${BASE}/login`);
