@@ -1,219 +1,675 @@
 <div align="center">
 
-# PayFlow
+# ⚡ PayFlow
 
-**AI-powered, automation-first payroll and HR for Indian companies.**
+### AI-powered, automation-first payroll and HR for Indian companies
 
-Statutory-compliant payroll, multi-tenant HR, an agentic AI copilot, workflow automation and a public API, in one codebase.
+*Run compliant payroll, let an AI copilot prepare the work, and keep a human in charge of every decision that matters.*
 
-[**Live Demo**](https://payflow-five-nu.vercel.app/) · [Features](#features) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Security](#security) · [Known Limitations](#known-limitations)
+<br/>
 
-![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-512%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-81%25-brightgreen)
-![Lighthouse](https://img.shields.io/badge/Lighthouse-96--100-brightgreen)
+[**🚀 Live Demo**](https://payflow-five-nu.vercel.app/) &nbsp;·&nbsp; [**🏗 Architecture**](#-architecture) &nbsp;·&nbsp; [**🔁 Workflows**](#-workflows-and-lifecycles) &nbsp;·&nbsp; [**🛠 Setup**](#-getting-started) &nbsp;·&nbsp; [**🔐 Security**](#-security-model) &nbsp;·&nbsp; [**⚠️ Limitations**](#%EF%B8%8F-known-limitations)
+
+<br/>
+
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=nextdotjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20+%20pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Gemini](https://img.shields.io/badge/AI-Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-512%20passing-2ea44f?style=flat-square)
+![Coverage](https://img.shields.io/badge/coverage-81%25-2ea44f?style=flat-square)
+![Lighthouse](https://img.shields.io/badge/Lighthouse-96–100-2ea44f?style=flat-square)
 
 </div>
 
 ---
 
-## Table of Contents
+## 📖 Table of Contents
 
-- [Overview](#overview)
-- [Live Demo](#live-demo)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [Scripts](#scripts)
-- [Testing](#testing)
-- [Security](#security)
-- [Performance](#performance)
-- [CI/CD and Deployment](#cicd-and-deployment)
-- [Public API and Webhooks](#public-api-and-webhooks)
-- [Project Status](#project-status)
-- [Known Limitations](#known-limitations)
-- [Contributing](#contributing)
-- [Author](#author)
+1. [Overview](#-overview)
+2. [At a Glance](#-at-a-glance)
+3. [Product Map](#-product-map)
+4. [Architecture](#-architecture)
+5. [Workflows and Lifecycles](#-workflows-and-lifecycles)
+6. [AI Layer](#-ai-layer)
+7. [Automation Engine](#-automation-engine)
+8. [Data and Tenancy](#-data-and-tenancy)
+9. [Security Model](#-security-model)
+10. [Quality and Performance](#-quality-and-performance)
+11. [Tech Stack](#-tech-stack)
+12. [Getting Started](#-getting-started)
+13. [Configuration](#-configuration)
+14. [Scripts](#-scripts)
+15. [Testing](#-testing)
+16. [CI/CD and Deployment](#-cicd-and-deployment)
+17. [Public API and Webhooks](#-public-api-and-webhooks)
+18. [Roadmap and Status](#-roadmap-and-status)
+19. [Known Limitations](#%EF%B8%8F-known-limitations)
+20. [Contributing](#-contributing)
+21. [Author](#-author)
 
 ---
 
-## Overview
+## 🧭 Overview
 
-PayFlow runs the full monthly payroll cycle for Indian companies: organisation setup, employee records, salary structures, attendance and leave, statutory deductions (PF, ESI, Professional Tax, TDS), payslips, payments and compliance tracking. On top of that sits an AI layer and an automation layer that remove repetitive work while keeping a human in control of every consequential action.
+PayFlow runs the full monthly payroll cycle for Indian companies: organisation setup, employee records, salary structures, attendance and leave, statutory deductions (PF, ESI, Professional Tax, TDS), payslips, payments and compliance tracking. An AI layer and an automation layer remove repetitive work, while every consequential action still requires a human.
 
-Design principles:
+### Design principles
 
-- **Money is integer paise everywhere.** No floating point in any payroll path (`src/lib/money.ts`).
-- **Tenant isolation in two layers.** Application-level membership checks plus Postgres row-level security.
-- **Humans approve, machines prepare.** Maker-checker on payroll; the AI can only *propose* actions, never execute them.
-- **Honest by design.** Anything simulated, unverified or not implemented is called out in the UI and in this document.
+| Principle | What it means in practice |
+| --- | --- |
+| 💰 **Integer paise, always** | No floating point in any payroll path. All money is integer paise (`src/lib/money.ts`). |
+| 🧱 **Two-layer tenant isolation** | Application membership checks plus Postgres row-level security. A bug in one layer is caught by the other. |
+| 🤝 **Humans approve, machines prepare** | Maker-checker on payroll. The AI can only *propose* actions; it has no write path. |
+| 🧾 **Tamper-evident history** | Append-only, hash-chained audit log written in the same transaction as every change. |
+| 🪞 **Honest by design** | Anything simulated, unverified or unimplemented is labelled in the UI and listed in this document. |
 
-## Live Demo
+### What makes it different
 
-**https://payflow-five-nu.vercel.app/**
+- **The AI cannot act on its own.** It proposes; a stored, expiring, atomically-claimed proposal runs only after a person confirms.
+- **Automation never reacts to a rolled-back change.** Events are recorded in the same transaction as the business change.
+- **Anonymous surveys are anonymous by structure**, not by policy: who answered and what was answered live in separate tables.
+- **Degrades gracefully.** No AI key? A deterministic engine takes over. No email key? Steps are recorded as skipped, never faked.
 
-If the demo database has been seeded (`npm run db:seed`), you can sign in with the demo accounts below. The seed creates *Brightwave Technologies* with 50 employees, about 6,000 attendance records and 6 months of paid payroll.
+---
 
-| Role        | Email                  |
-| ----------- | ---------------------- |
-| Super Admin | `admin@payflow.demo`   |
-| HR Admin    | `hr@payflow.demo`      |
-| Finance     | `finance@payflow.demo` |
-| Manager     | `manager@payflow.demo` |
-| Employee    | `employee@payflow.demo`|
+## 📊 At a Glance
 
-Password for all demo accounts: `PayFlowDemo#2026`
+| 🧪 Tests | 📈 Coverage | ⚡ Lighthouse | 📦 First-load JS | 🧩 Phases |
+| :---: | :---: | :---: | :---: | :---: |
+| **512** in 43 files | **81%** statements | **96–100** performance | **104–250 kB** per route | **10 / 10** done |
 
-> **Warning:** these credentials are public. Change or delete them before using the database for anything real.
-
-## Features
-
-### Foundation
-
-- **Authentication** via Better Auth: email/password, Google and Microsoft SSO (enabled when keys are set), TOTP two-factor with backup codes, forgot/reset password.
-- **RBAC** for Super Admin, HR Admin, Finance, Manager and Employee, enforced in middleware, in `getContext()` and in every server action through `requireActionPermission()`.
-- **Multi-tenancy**: every tenant table carries `organization_id`; users can belong to many companies and switch between them. The active-company cookie is re-validated against memberships on every request.
-- **Tamper-evident audit log**: append-only (database triggers block UPDATE and DELETE, even for the table owner) and hash-chained, with a verification view at `/audit`.
-- **UX**: dark/light theme, Cmd+K command palette, collapsible sidebar, skeleton loaders, error boundaries, reduced-motion support, English and Hindi.
-
-### Organisation, employees and salary
-
-- **Setup wizard**: PAN, TAN, GSTIN, PF, ESI and PT registrations, departments, designations, pay schedule, holidays.
-- **Employee records**: PAN, Aadhaar and bank details encrypted at rest (AES-256-GCM), masked in the UI, with audited reveal. Search, filters, pagination, probation tracking, soft delete and an org chart with loop prevention.
-- **Documents**: PDF/PNG/JPG up to 5 MB, validated by magic bytes, permission-checked and audited downloads.
-- **CSV import/export**: all-or-nothing import that reports every bad row; exports omit sensitive fields and neutralise spreadsheet formulas.
-- **Onboarding and offboarding** checklists and single-use, expiring invitations.
-- **Salary structures**: reusable components and templates; a pure paise-based engine supporting fixed, % of CTC, % of Basic and balancing-figure components; append-only revision history.
-
-### Payroll engine
-
-- PF (dated EPFO ceiling, organisation override), ESI, state-wise Professional Tax, TDS for old and new regimes (rebate, surcharge with marginal relief, cess), LOP proration, overtime, arrears, bonus, reimbursements, loan EMIs, gratuity, and full-and-final settlement.
-- **Lifecycle**: draft → review → approve → process → paid. One live run per month (partial unique index); the approver must differ from the preparer and submitter (database CHECK plus server check); items lock once a run leaves draft; processing locks the run row.
-- **Payments**: simulated provider by default; RazorpayX adapter with HMAC-verified, de-duplicated webhooks.
-
-### Attendance, leave, expenses, tax and compliance
-
-- **Attendance**: self check-in/out with optional geo-fence, shifts and rosters, audited HR corrections, and a monthly lock enforced by a database trigger. Payroll reads LOP and overtime only from locked months.
-- **Leave**: types and balances per financial year (prorated, carry-forward), half days, overlap and balance checks, and approval rules (no self-approval; managers decide only for direct reports).
-- **Expenses**: claims with content-checked receipts, folded into the next payroll run automatically.
-- **Tax**: old-regime declarations (80C, 80D, HRA, other) verified by HR, regime comparison, annual tax summary PDF.
-- **Compliance**: PF/ESI/PT/TDS calendar, challan tracking, CSV reports per approved month.
-- **Reports**: cost trend, department cost, headcount, attrition, overtime and year-over-year, exported to Excel and PDF (each export audited).
-
-### Dashboards
-
-Role-aware views (**Company**, **My team**, **Me**) with animated KPIs, cost trend, department breakdown, payroll countdown, activity feed, insights, announcements and a first-run product tour. Charts are inline SVG with screen-reader text equivalents and no chart library.
-
-### AI layer
-
-- **PayBot**: streaming, role-aware assistant with Markdown replies, tool-status chips, source cards, in-chat charts, voice input (English/Hindi) and read-aloud.
-- **Safe tool calling**: 11 read-only, permission-scoped server functions. No tool accepts an employee id or a free-form query; arguments and outputs are Zod-validated.
-- **Agentic Copilot**: the model can only *propose* actions (approve/reject leave, create payroll draft, department raise, cancel run). A proposal is stored server-side with a 15-minute expiry and shown as a confirmation card. Only **Confirm** executes it, from the stored parameters, through the same domain code and audit trail as the normal screens. Destructive actions need a typed `CONFIRM`. Execution is claimed atomically, so double clicks cannot run it twice.
-- **Payroll Copilot**: pre-approval checklist and anomaly detection (salary spikes, duplicate bank accounts, abnormal deductions, ghost employees) with explanations and an audited "mark as expected" flow.
-- **Payslip explainer** (English or Hindi): output is Zod-validated and every rupee figure must exist on the payslip, otherwise the answer is discarded.
-- **Policy RAG**: upload PDF/TXT/MD policies; chunked, embedded (Gemini `gemini-embedding-001`, 768-d) and stored in pgvector, with Postgres full-text search as fallback. Answers cite document and page.
-- **Document AI**: Gemini Vision extraction from PAN, Aadhaar, bank proof and resumes, with mandatory human verification and checksum validation before anything is saved.
-- **Generators**: offer letters, appointment letters, job descriptions, announcement emails.
-- **Guardrails**: prompt-injection and jailbreak refusal, tool-output sanitising, PII masking before storage or model calls, per-user rate limits, a daily token budget, per-call usage and cost logging, and graceful fallback to a deterministic engine when no key is set or the service fails.
-
-### Automation and integrations
-
-- **Visual workflow builder** (React Flow) with triggers, conditions and actions (email, Slack, Teams, WhatsApp, webhook, in-app notification, task, approval). Graphs are validated live and again on the server. Runs keep step logs, retry with backoff and never repeat completed steps.
-- **Automatic payroll pipeline**: lock attendance, create draft, run checks, submit for approval, remind approvers, notify employees. A human approver is still required and payment is always started by a person.
-- **Background jobs**: Inngest when configured; otherwise an authenticated cron endpoint sweeps stranded runs and due retries.
-- **Public API** (`/api/v1`) with scoped, rate-limited, revocable API keys and an OpenAPI spec.
-- **Signed webhooks** with retries and manual resend.
-- **Live notifications** over server-sent events.
-
-### Employee and enterprise features
-
-- **Salary simulator** using the real payroll engine across both tax regimes.
-- **Earned wage access** (mock payout), **recognition** (streaks, badges, peer kudos) and **anonymous pulse surveys** with structural anonymity.
-- **Analytics**: cost forecast, transparent rule-based attrition risk, pay equity with small-group suppression, company-entered salary benchmarks.
-- **Enterprise settings**: SSO domain enforcement, per-company feature flags, white-label branding, display-only multi-currency.
-- **Privacy**: personal data export and a reviewed erasure workflow that respects statutory retention.
-- **PWA** with offline attendance queue (IndexedDB) and background sync.
-
-## Tech Stack
-
-| Layer          | Technology                                                                         |
-| -------------- | ---------------------------------------------------------------------------------- |
-| Framework      | Next.js 15 (App Router, Server Actions), React, TypeScript (strict)                |
-| Styling        | Tailwind CSS v4, Geist                                                              |
-| Database       | PostgreSQL 16 with pgvector, Drizzle ORM, row-level security                       |
-| Auth           | Better Auth (email/password, Google, Microsoft, TOTP 2FA)                          |
-| Validation     | Zod                                                                                 |
-| AI             | Google Gemini (chat, embeddings, vision) with a deterministic built-in fallback    |
-| Jobs           | Inngest, with a cron-based fallback                                                 |
-| Payments       | RazorpayX (simulated provider by default)                                           |
-| Email          | Resend                                                                              |
-| Rate limiting  | Upstash Redis with in-memory fallback; Postgres-backed auth limits                  |
-| Workflows      | React Flow                                                                          |
-| i18n           | next-intl (English, Hindi)                                                          |
-| Testing        | Vitest, Playwright, Lighthouse CI                                                   |
-| Delivery       | GitHub Actions, Docker (multi-stage, standalone output), Vercel                    |
-
-## Architecture
-
-```
-Browser ──> middleware (session cookie check, nonce-based CSP)
-        ──> Server Component / Server Action
-              └─ getContext(): session ─> membership ─> role    (validated every request)
-              └─ requireActionPermission(perm)                   (server-side RBAC)
-              └─ runAction(): permission + transaction + audit
-              └─ withTenant(orgId, tx => ...)                    (sets app.current_org)
-                    └─ Postgres RLS policies + immutability triggers
-              └─ writeAudit(tx, ...)   hash-chained, same transaction as the change
+```mermaid
+xychart-beta
+    title "Test coverage vs enforced CI floor (%)"
+    x-axis ["Statements", "Lines", "Functions", "Branches"]
+    y-axis "Percent" 0 --> 100
+    bar [81, 83, 79, 68]
+    line [80, 80, 75, 60]
 ```
 
-Key decisions:
+> The line is the floor enforced in `vitest.config.ts`. CI fails if any metric drops below it.
 
-- **RLS as a second layer.** `withTenant()` sets `app.current_org` per transaction and policies compare against it. The app must connect as a **non-owner** role, because Postgres does not apply RLS to table owners.
-- **Audit in the same transaction.** A rolled-back change never leaves an audit entry, and an audit entry never exists without its change.
-- **Database is the source of truth for automation.** Events are recorded in the same transaction as the business change and deduplicated, so a crash cannot lose or duplicate work.
-- **AI proposes, humans dispose.** The model has no write path. Confirmed actions run stored parameters through ordinary domain code.
+```mermaid
+xychart-beta
+    title "Lighthouse scores (desktop, production build, local)"
+    x-axis ["Landing", "Login", "Sign-up"]
+    y-axis "Score" 90 --> 100
+    bar [97, 100, 100]
+```
 
-## Getting Started
+*Landing performance measured 96–98 across runs; the bar shows the midpoint. Accessibility and SEO scored 100 on all three pages. Authenticated pages were not audited by Lighthouse.*
+
+---
+
+## 🗺 Product Map
+
+```mermaid
+mindmap
+  root((PayFlow))
+    Foundation
+      Auth and 2FA
+      RBAC five roles
+      Multi-tenancy
+      Hash-chained audit
+    People
+      Setup wizard
+      Employees
+      Documents
+      Salary structures
+      Onboarding
+    Payroll
+      PF ESI PT TDS
+      Maker-checker lifecycle
+      Payslips
+      RazorpayX
+      Full and final
+    Time and Money
+      Attendance
+      Leave
+      Expenses
+      Tax declarations
+      Compliance calendar
+    Intelligence
+      PayBot
+      Payroll Copilot
+      Agentic actions
+      Policy RAG
+      Document AI
+      Analytics
+    Automation
+      Visual workflows
+      Payroll pipeline
+      Public API
+      Webhooks
+      Live notifications
+    Employee Experience
+      Salary simulator
+      Earned wage access
+      Recognition
+      Anonymous surveys
+      PWA offline
+      Hindi
+```
+
+### Role access
+
+| Capability | Super Admin | HR Admin | Finance | Manager | Employee |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| Company dashboard | ✅ | ✅ | ✅ | – | – |
+| Team dashboard | ✅ | ✅ | – | ✅ | – |
+| Personal dashboard and payslips | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Manage employees and policies | ✅ | ✅ | – | – | – |
+| Prepare and approve payroll | ✅ | ✅ | ✅ | – | – |
+| Decide leave | ✅ | ✅ | – | direct reports | – |
+| Agentic AI actions (`ai:act`) | ✅ | ✅ | ✅ | limited | ❌ |
+| Workflows, API keys, enterprise settings | ✅ | per permission | – | – | – |
+
+*Illustrative summary. The authoritative source is the permission map in the codebase, enforced server-side.*
+
+---
+
+## 🏗 Architecture
+
+### System context
+
+```mermaid
+flowchart LR
+    subgraph Client["🖥 Client"]
+        B["Browser PWA<br/>offline attendance queue"]
+        V["Voice input<br/>Web Speech API"]
+    end
+
+    subgraph Edge["🛡 Edge"]
+        M["Middleware<br/>session cookie check<br/>nonce-based CSP"]
+    end
+
+    subgraph App["⚙️ Next.js 15 application"]
+        RSC["Server Components"]
+        SA["Server Actions<br/>runAction"]
+        API["Public API /api/v1"]
+        SSE["SSE notifications"]
+        JOBS["Job engine<br/>plain functions"]
+    end
+
+    subgraph Data["🗄 Data"]
+        PG[("PostgreSQL 16<br/>RLS + triggers<br/>pgvector")]
+        RL[("Upstash Redis<br/>rate limits")]
+    end
+
+    subgraph Ext["🌐 External services"]
+        GEM["Google Gemini<br/>chat / embeddings / vision"]
+        RZP["RazorpayX"]
+        RES["Resend email"]
+        ING["Inngest"]
+        SLK["Slack / Teams / WhatsApp"]
+        WH["Customer webhooks"]
+    end
+
+    B --> M --> RSC
+    B --> M --> SA
+    V --> B
+    Ext2["API consumers"] --> API
+    RSC --> PG
+    SA --> PG
+    API --> PG
+    SSE --> PG
+    JOBS --> PG
+    SA --> RL
+    API --> RL
+    SA --> GEM
+    SA --> RZP
+    JOBS --> RES
+    JOBS --> SLK
+    JOBS --> WH
+    ING --> JOBS
+    RZP -. "signed webhook" .-> API
+```
+
+### Request lifecycle
+
+Every mutation follows the same guarded path, so permissions, tenancy and audit cannot be forgotten by an individual feature.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant MW as Middleware
+    participant SA as Server Action
+    participant CTX as getContext
+    participant DB as Postgres (RLS)
+    participant AU as Audit chain
+
+    U->>MW: Request with session cookie
+    MW->>MW: Cookie check + per-request CSP nonce
+    MW->>SA: Forward
+    SA->>CTX: Validate session, membership, role
+    CTX-->>SA: Context (user, org, role)
+    SA->>SA: requireActionPermission(perm)
+    SA->>SA: Zod-validate input
+    SA->>DB: BEGIN; withTenant(orgId)
+    Note over DB: SET app.current_org = orgId<br/>RLS policies now filter every query
+    SA->>DB: Domain change
+    SA->>AU: writeAudit(tx) hash-chained
+    DB-->>SA: COMMIT (change and audit succeed or fail together)
+    SA-->>U: Result
+```
+
+### Guardrails by layer
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  EDGE         cookie check · nonce CSP · security headers · HSTS     │
+├──────────────────────────────────────────────────────────────────────┤
+│  CONTEXT      session → membership → role   (re-validated per call)  │
+├──────────────────────────────────────────────────────────────────────┤
+│  ACTION       requireActionPermission · Zod · rate limit · runAction │
+├──────────────────────────────────────────────────────────────────────┤
+│  DOMAIN       maker-checker · locks · one-live-run-per-month         │
+├──────────────────────────────────────────────────────────────────────┤
+│  DATABASE     RLS by app.current_org · CHECKs · immutability triggers│
+├──────────────────────────────────────────────────────────────────────┤
+│  AUDIT        append-only · hash-chained · same transaction          │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Repository layout
+
+```
+payflow/
+├── src/
+│   ├── app/                 # App Router: pages, layouts, API routes
+│   ├── lib/
+│   │   ├── money.ts         # integer-paise helpers
+│   │   ├── csp.ts           # nonce-based CSP
+│   │   ├── payroll/         # engine: PF, ESI, PT (pt.ts), TDS, LOP, F&F
+│   │   └── ai/              # tools.ts, guardrails, fallback engine
+│   ├── inngest/             # Inngest wrappers around the job engine
+│   └── middleware.ts        # session check + CSP nonce
+├── drizzle/                 # migrations and rls.sql
+├── docker/                  # postgres-init.sql (creates payflow_app role)
+├── public/                  # sw.js, offline.html, icons
+├── tests/
+│   ├── unit/                # includes access-guards.test.ts
+│   └── e2e/                 # phase2..9 and password-reset smoke scripts
+├── .github/workflows/ci.yml
+├── docker-compose.yml
+└── vitest.config.ts
+```
+
+---
+
+## 🔁 Workflows and Lifecycles
+
+### Payroll run lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft: Create run
+    Draft --> Review: Submit
+    Review --> Draft: Changes requested
+    Review --> Approved: Approver confirms
+    Approved --> Processing: Start payment
+    Processing --> Paid: Provider settles
+    Draft --> Cancelled: Cancel
+    Review --> Cancelled: Cancel
+    Paid --> [*]
+    Cancelled --> [*]
+
+    note right of Review
+        Maker-checker
+        Approver must differ from preparer
+        and submitter. DB CHECK + server check.
+    end note
+    note right of Approved
+        Items locked by trigger
+        once the run leaves draft
+    end note
+```
+
+| Stage | Guarantee |
+| --- | --- |
+| Draft | Only one live run per month (partial unique index). |
+| Review | Pre-approval checklist and anomaly detection surface problems with fix links. |
+| Approved | Approver ≠ preparer ≠ submitter, enforced in the database and on the server. |
+| Processing | Run row locked; payment is always started by a person. |
+| Paid | Approved expense claims marked paid; `payroll.paid` webhook queued. |
+
+### End-to-end monthly cycle
+
+```mermaid
+flowchart TD
+    A["📅 Month ends"] --> B["Lock attendance<br/>absent marked, trigger freezes month"]
+    B --> C["Create payroll draft<br/>LOP and overtime from locked attendance"]
+    C --> D["Statutory engine<br/>PF · ESI · PT · TDS · loans · arrears"]
+    D --> E["Pre-run checklist<br/>+ anomaly detection"]
+    E -->|"high-severity anomaly<br/>or failing check"| X["⛔ Pipeline stops<br/>and explains why"]
+    E -->|"clean"| F["Submit for approval"]
+    F --> G["👤 Human approver<br/>must differ from preparer"]
+    G --> H["Process and pay<br/>started by a person"]
+    H --> I["Payslips published<br/>employees notified"]
+    H --> J["Compliance calendar<br/>challans and CSV reports"]
+    X --> C
+```
+
+### Attendance and leave decisions
+
+```mermaid
+flowchart LR
+    L["Leave request"] --> C1{"Overlap and balance<br/>checks pass?"}
+    C1 -- no --> R1["Rejected at submit"]
+    C1 -- yes --> C2{"Who decides?"}
+    C2 -->|"HR"| D["Any request"]
+    C2 -->|"Manager"| E["Direct reports only"]
+    C2 -->|"Requester"| F["❌ Never their own"]
+    D --> G["Approved"]
+    E --> G
+    G --> H{"Unpaid?"}
+    H -- yes --> I["Counts as LOP in payroll"]
+    H -- no --> J["Balance reduced"]
+```
+
+---
+
+## 🤖 AI Layer
+
+### Agentic Copilot: propose, confirm, execute
+
+The model has no write path. It can only create a *proposal*, which a person must confirm.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Person
+    participant PB as PayBot (LLM)
+    participant TL as Propose tools
+    participant AA as ai_actions table
+    participant UI as Confirm card
+    participant DM as Domain code
+    participant AU as Audit chain
+
+    P->>PB: "Approve Priya's leave"
+    PB->>TL: propose_approve_leave
+    TL->>TL: Check ai:act + underlying permission
+    TL->>AA: Store parameters server-side (15 min expiry)
+    TL-->>UI: Card listing exactly what will change
+    P->>UI: Confirm (typed CONFIRM if destructive)
+    UI->>AA: Claim row atomically
+    Note over AA: Double click or second tab<br/>cannot claim twice
+    AA->>DM: Run STORED parameters (client cannot alter)
+    DM->>DM: Permission, validation, same code as normal screens
+    DM->>AU: leave.approved
+    AU->>AU: ai.action.executed
+    DM-->>P: Result
+```
+
+| Proposal tool | Destructive (needs typed `CONFIRM`) |
+| --- | :---: |
+| `propose_approve_leave` | – |
+| `propose_reject_leave` | – |
+| `propose_create_payroll_draft` | – |
+| `propose_department_raise` | ✅ |
+| `propose_cancel_payroll_run` | ✅ |
+
+A department raise re-checks that each salary is unchanged since the preview, then applies all-or-nothing as append-only revisions.
+
+### PayBot request path
+
+```mermaid
+flowchart TD
+    Q["User message"] --> G1["Guardrails<br/>injection and jailbreak refusal"]
+    G1 --> G2["PII masking<br/>PAN · Aadhaar · IFSC · email · phone · account"]
+    G2 --> RL{"Rate limit 20 msg/min<br/>and daily token budget?"}
+    RL -- over --> Z["Polite refusal"]
+    RL -- ok --> MODE{"Gemini key set<br/>and service healthy?"}
+    MODE -- yes --> LLM["Gemini with tools"]
+    MODE -- no --> FB["Deterministic keyword engine"]
+    LLM --> T["11 read-only tools<br/>permission re-checked at call time<br/>Zod in and out"]
+    FB --> T
+    T --> S["Tool-output sanitising"]
+    S --> R["Streamed reply<br/>sources · charts · follow-ups"]
+    R --> LOG["ai_usage<br/>tokens and estimated cost"]
+```
+
+### AI feature summary
+
+| Feature | Behaviour | Safety net |
+| --- | --- | --- |
+| **PayBot** | Streaming, role-aware, voice (English/Hindi), read-aloud | 11 read-only tools; no tool takes an employee id or a query |
+| **Payroll Copilot** | Checklist plus anomaly detection (spikes, duplicate bank accounts, abnormal deductions, ghost employees) | Deterministic explanations; "expected" flag is audited |
+| **Payslip explainer** | English or Hindi, own payslip only | Every rupee figure must exist on the payslip or the answer is discarded |
+| **Policy RAG** | PDF/TXT/MD, ~900-char chunks, Gemini 768-d embeddings, pgvector HNSW | Cosine search, else Postgres full-text with relevance filter; cites document and page |
+| **Document AI** | Vision extraction from PAN, Aadhaar, bank proof, resume | Person must verify; PAN format, Aadhaar Verhoeff checksum, IFSC checks; file not stored |
+| **Generators** | Offer and appointment letters, JDs, announcement emails | Drafts only; facts verified against inputs |
+
+---
+
+## 🔄 Automation Engine
+
+### Visual workflows
+
+```mermaid
+flowchart LR
+    T["⚡ Trigger<br/>leave.applied<br/>payroll.approved<br/>employee.joined<br/>deadline.near"] --> C{"Condition<br/>yes / no"}
+    C -- yes --> A1["📧 Email"]
+    C -- yes --> A2["💬 Slack / Teams"]
+    C -- no --> A3["🔔 In-app notification"]
+    A1 --> AP["✋ Approval step<br/>pauses the run"]
+    AP -- approved --> A4["🔗 Webhook"]
+    AP -- rejected --> A5["📝 Task"]
+```
+
+**Reliability model**
+
+```mermaid
+flowchart TD
+    E["Business change commits"] --> EV["Event row written<br/>in the SAME transaction"]
+    EV --> DD{"Dedupe key seen?"}
+    DD -- yes --> SKIP["Ignore (idempotent)"]
+    DD -- no --> RUN["Create workflow run"]
+    RUN --> STEP["Execute step"]
+    STEP -->|"success"| NEXT["Record step, continue"]
+    STEP -->|"failure"| RT{"Attempts left?"}
+    RT -- yes --> BO["Backoff and retry<br/>finished steps never repeat"]
+    BO --> STEP
+    RT -- no --> FAIL["Run failed<br/>admins notified, manual retry"]
+    NEXT --> DONE["Run complete with step-by-step log"]
+```
+
+### How background work is driven
+
+```mermaid
+flowchart LR
+    subgraph Preferred
+        I["Inngest<br/>INNGEST_EVENT_KEY set"] --> FN["Job functions<br/>src/inngest"]
+    end
+    subgraph Fallback
+        CR["Any scheduler every 5 min<br/>GET /api/cron/tick<br/>Bearer CRON_SECRET"] --> SW["Sweep stranded runs<br/>and due webhook retries"]
+        RA["Run right after response"] --> SW
+    end
+    FN --> ENG["Plain-function engine"]
+    SW --> ENG
+    ENG --> DB[("Database rows<br/>are the source of truth")]
+```
+
+A crash cannot lose work, because state lives in database rows rather than in a queue.
+
+### Webhook delivery
+
+| Attempt | Delay |
+| :---: | :---: |
+| 1 | immediate |
+| 2 | 1 minute |
+| 3 | 5 minutes |
+| 4 | 30 minutes |
+| 5 | 2 hours |
+| 6 | 8 hours |
+| After | marked **failed**, manual **Resend** button |
+
+---
+
+## 🗄 Data and Tenancy
+
+### Tenant isolation
+
+```mermaid
+flowchart TD
+    REQ["Request"] --> CK["Active-company cookie"]
+    CK --> VAL{"Re-validated against<br/>memberships every request?"}
+    VAL -- no --> DENY["Rejected"]
+    VAL -- yes --> WT["withTenant orgId, fn"]
+    WT --> SET["SET app.current_org = orgId<br/>per transaction"]
+    SET --> POL["RLS policy:<br/>organization_id = current_setting app.current_org"]
+    POL --> ROWS["Only this tenant's rows visible"]
+```
+
+> ⚠️ Postgres does **not** apply RLS to table owners or superusers. Migrate as the owner, but run the app as a **non-owner** role (`payflow_app`).
+
+### Simplified entity model
+
+```mermaid
+erDiagram
+    ORGANIZATION ||--o{ MEMBERSHIP : has
+    USER ||--o{ MEMBERSHIP : holds
+    ORGANIZATION ||--o{ EMPLOYEE : employs
+    EMPLOYEE ||--o{ SALARY_REVISION : "append-only"
+    EMPLOYEE ||--o{ ATTENDANCE : records
+    EMPLOYEE ||--o{ LEAVE_REQUEST : files
+    EMPLOYEE ||--o{ EXPENSE_CLAIM : submits
+    ORGANIZATION ||--o{ PAYROLL_RUN : runs
+    PAYROLL_RUN ||--o{ PAYROLL_ITEM : contains
+    EMPLOYEE ||--o{ PAYROLL_ITEM : paid_in
+    ORGANIZATION ||--o{ AUDIT_ENTRY : "hash-chained"
+    ORGANIZATION ||--o{ AI_ACTION : "proposals"
+    ORGANIZATION ||--o{ WORKFLOW : defines
+    WORKFLOW ||--o{ WORKFLOW_RUN : executes
+    ORGANIZATION ||--o{ API_KEY : issues
+    ORGANIZATION ||--o{ WEBHOOK_ENDPOINT : subscribes
+```
+
+*Conceptual view for orientation; table and column names in the schema may differ.*
+
+### Audit chain
+
+```mermaid
+flowchart LR
+    E1["Entry N-1<br/>hash h(N-1)"] --> E2["Entry N<br/>prev = h(N-1)<br/>hash = H(payload + prev)"] --> E3["Entry N+1<br/>prev = h(N)"]
+```
+
+Database triggers block `UPDATE` and `DELETE` on the audit table, even for its owner. The `/audit` page verifies the chain.
+
+---
+
+## 🔐 Security Model
+
+| Area | Controls |
+| --- | --- |
+| **Transport and browser** | Nonce-based CSP with `strict-dynamic`, no `unsafe-inline` scripts, `frame-ancestors 'none'`, `object-src 'none'`, `form-action 'self'`. HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin`. |
+| **Authentication** | Better Auth, Google/Microsoft SSO, TOTP 2FA with backup codes, SSO-domain enforcement, single-use 60-minute reset links, sessions revoked everywhere on reset. Session checks skip the cookie cache so revocation is immediate. |
+| **Authorisation** | RBAC in middleware, `getContext()` and every action via `runAction`; RLS as second layer. `access-guards.test.ts` fails the build on any unguarded action, API route or admin page. |
+| **Data at rest** | AES-256-GCM for PAN, Aadhaar and bank details; masked in UI and exports; reveals audited. |
+| **Uploads** | PDF/PNG/JPG ≤ 5 MB validated by magic bytes; permission-checked, audited downloads. |
+| **CSV** | All-or-nothing import; exports omit sensitive fields and neutralise formulas. |
+| **Outbound calls** | https only; refuse private, loopback, link-local and metadata ranges; never follow redirects (SSRF guard). |
+| **API keys** | `pf_live_…` shown once, stored as SHA-256 hash; scoped, rate-limited, expiring, instantly revocable; explicit field allow-lists. |
+| **Webhooks** | HMAC-SHA256 over `timestamp.body`, 5-minute replay window, encrypted signing secret. |
+| **Rate limits** | Postgres-backed auth limits (shared across instances); separate limits for API keys, webhooks, PayBot, password reset. |
+| **Privacy** | Personal-data export (identifiers masked to last 4); erasure workflow gated on exit and HR review; statutory records retained. |
+| **Supply chain** | CI fails on critical `npm audit` findings; `postcss` pinned via overrides; `next` pinned to 15.5.29; no secrets committed. |
+
+**Accepted advisories (re-check each release):** `inngest` pulls a `zod` version with a high advisory (parses only our own payloads); `exceljs` pulls an old `uuid` (moderate); `drizzle-kit`'s `esbuild` is dev-only.
+
+To report a vulnerability, please use a **private security advisory** on the repository rather than a public issue.
+
+---
+
+## 🧪 Quality and Performance
+
+### Quality gates
+
+```mermaid
+flowchart LR
+    P["Push / PR"] --> F["Format · Lint (0 warnings) · Typecheck"]
+    F --> AU["npm audit<br/>fail on critical"]
+    AU --> DB["Migrate + RLS on pgvector Postgres<br/>non-owner role"]
+    DB --> TS["Tests + coverage floors"]
+    TS --> BD["Production build"]
+    BD --> E2["Seeded browser smoke<br/>including CSP violations"]
+    E2 --> LH["Lighthouse CI<br/>public pages"]
+    LH --> DK["Docker build + boot check"]
+```
+
+### Bundle budget
+
+```mermaid
+xychart-beta
+    title "First-load JS (kB), range across routes"
+    x-axis ["Lightest route", "Shared baseline", "Workflow builder", "Payroll run page"]
+    y-axis "kB" 0 --> 260
+    bar [104, 103, 218, 250]
+```
+
+The workflow builder's React Flow is loaded only on that route. Charts are inline SVG with no chart library, each with a screen-reader text equivalent. LCP is under one second on public pages.
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 15 (App Router, Server Actions), React, TypeScript strict |
+| Styling | Tailwind CSS v4, Geist, dark/light theme |
+| Database | PostgreSQL 16, pgvector, Drizzle ORM, row-level security |
+| Auth | Better Auth (email/password, Google, Microsoft, TOTP) |
+| Validation | Zod |
+| AI | Google Gemini (chat, `gemini-embedding-001`, Vision) with deterministic fallback |
+| Jobs | Inngest, with cron-tick fallback |
+| Payments | RazorpayX (simulated by default) |
+| Email | Resend |
+| Rate limiting | Upstash Redis (in-memory fallback), Postgres for auth |
+| Workflows | React Flow |
+| i18n | next-intl (English, Hindi) |
+| Testing | Vitest, Playwright, Lighthouse CI |
+| Delivery | GitHub Actions, Docker (multi-stage, non-root), Vercel |
+
+---
+
+## 🛠 Getting Started
 
 ### Prerequisites
 
-- Node.js 20+
-- PostgreSQL 16 (pgvector recommended), or Docker
-- npm
+- Node.js 20+ and npm
+- PostgreSQL 16 (pgvector recommended) or Docker
 
-### Installation
+### Install
 
 ```bash
 git clone <your-repository-url>
 cd payflow
 
-cp .env.example .env        # fill in DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY
+cp .env.example .env          # fill in DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY
 npm install
 
-npm run db:generate         # only after schema changes
-npm run db:migrate          # apply migrations (as the owner role)
-npm run db:rls              # apply row-level security and audit triggers
+npm run db:generate           # only after schema changes
+npm run db:migrate            # apply migrations (as the OWNER role)
+npm run db:rls                # apply row-level security + audit triggers
 npm run dev
 ```
 
 Generate secrets:
 
 ```bash
-openssl rand -base64 32     # BETTER_AUTH_SECRET
-openssl rand -hex 32        # ENCRYPTION_KEY
+openssl rand -base64 32       # BETTER_AUTH_SECRET
+openssl rand -hex 32          # ENCRYPTION_KEY
 ```
 
 ### Database roles (important)
 
-Run migrations as the table owner, but point the app's `DATABASE_URL` at a **non-owner role**. Otherwise row-level security is silently bypassed.
+Run migrations as the table owner, but point the app's `DATABASE_URL` at a **non-owner role**, otherwise RLS is silently bypassed.
 
 ```bash
-docker compose up db        # Postgres 16 + pgvector; creates the payflow_app role
+docker compose up db          # Postgres 16 + pgvector; creates the payflow_app role
 ```
 
 On Neon or another managed provider, create a separate application role and grant it table privileges.
@@ -221,9 +677,23 @@ On Neon or another managed provider, create a separate application role and gran
 ### Seed demo data
 
 ```bash
-npm run db:seed             # deterministic; refuses to run twice
-npm run db:seed -- --reset  # rebuild from scratch
+npm run db:seed               # deterministic; refuses to run twice
+npm run db:seed -- --reset    # rebuild
 ```
+
+Creates **Brightwave Technologies**: 50 employees across 6 departments, about 6,000 attendance records, leave, expenses, 6 months of paid payroll produced by the real engine, sample policies, recognition, an open survey, EWA enabled and salary benchmarks.
+
+| Role | Email |
+| --- | --- |
+| Super Admin | `admin@payflow.demo` |
+| HR Admin | `hr@payflow.demo` |
+| Finance | `finance@payflow.demo` |
+| Manager | `manager@payflow.demo` |
+| Employee | `employee@payflow.demo` |
+
+Password: `PayFlowDemo#2026`
+
+> ⚠️ These credentials are public. Change or delete them before using the database for anything real.
 
 ### Docker
 
@@ -231,110 +701,102 @@ npm run db:seed -- --reset  # rebuild from scratch
 docker compose up
 ```
 
-Starts Postgres 16 with pgvector and the application image (multi-stage, standalone output, non-root user, health check on `/api/health`). Run migrations and `npm run db:rls` as the owner role first, and supply real secrets in `.env`.
+Starts Postgres 16 with pgvector and the app image (multi-stage, standalone output, non-root, health check at `/api/health`). Run migrations and `npm run db:rls` as the owner first, and provide real secrets in `.env`.
 
-## Configuration
+---
 
-Copy `.env.example` for the complete list. Commonly used variables:
+## ⚙️ Configuration
 
-| Variable                                   | Required | Purpose                                                              |
-| ------------------------------------------ | -------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`                             | Yes      | Postgres connection for the app (non-owner role)                     |
-| `BETTER_AUTH_SECRET`                       | Yes      | Session and auth signing secret                                      |
-| `ENCRYPTION_KEY`                           | Yes      | 32-byte hex key for AES-256-GCM field encryption                     |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`           | No       | Enables Gemini for PayBot, embeddings, Vision and generators         |
-| `AI_DAILY_TOKEN_LIMIT`                     | No       | Daily token budget for AI features                                   |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`   | No       | RazorpayX payments (otherwise simulated)                             |
-| `RAZORPAYX_ACCOUNT_NUMBER`                 | No       | RazorpayX account                                                    |
-| `RAZORPAY_WEBHOOK_SECRET`                  | No       | Verifies `/api/webhooks/razorpay`                                    |
-| `INNGEST_EVENT_KEY`                        | No       | Enables Inngest; otherwise use `GET /api/cron/tick`                  |
-| `CRON_SECRET`                              | No       | Bearer token protecting `/api/cron/tick`                             |
-| `RESEND_API_KEY`, `RESEND_FROM`            | No       | Transactional email, including password reset                        |
-| `ALLOW_PRIVATE_WEBHOOKS`                   | No       | Set to `1` only for local E2E; disables the SSRF guard               |
+See `.env.example` for the full list.
 
-Google and Microsoft SSO client IDs and Upstash credentials are also read from the environment; see `.env.example` for the exact names.
+| Variable | Required | Purpose |
+| --- | :---: | --- |
+| `DATABASE_URL` | ✅ | App connection (non-owner role) |
+| `BETTER_AUTH_SECRET` | ✅ | Auth signing secret |
+| `ENCRYPTION_KEY` | ✅ | 32-byte hex key for AES-256-GCM |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | – | Enables Gemini features |
+| `AI_DAILY_TOKEN_LIMIT` | – | Daily AI token budget |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | – | RazorpayX payments |
+| `RAZORPAYX_ACCOUNT_NUMBER` | – | RazorpayX account |
+| `RAZORPAY_WEBHOOK_SECRET` | – | Verifies `/api/webhooks/razorpay` |
+| `INNGEST_EVENT_KEY` | – | Enables Inngest |
+| `CRON_SECRET` | – | Protects `/api/cron/tick` |
+| `RESEND_API_KEY`, `RESEND_FROM` | – | Transactional email and password reset |
+| `ALLOW_PRIVATE_WEBHOOKS` | – | `1` for local E2E only; disables SSRF guard |
 
-Features degrade gracefully: without `GEMINI_API_KEY`, PayBot uses a keyword engine, Document AI becomes manual entry with the same verification step, and policy search is keyword-only. Without Resend or WhatsApp keys, those workflow steps are recorded as "skipped (not configured)".
+Google/Microsoft client IDs and Upstash credentials are also read from the environment; see `.env.example` for exact names.
 
-## Scripts
+### Graceful degradation
 
-| Command                 | Purpose                                                               |
-| ----------------------- | --------------------------------------------------------------------- |
-| `npm run dev`           | Start the development server                                          |
-| `npm run build`         | Production build                                                      |
-| `npm run verify`        | Typecheck, lint, tests and build in one go                            |
-| `npm test`              | Unit tests (integration tests skip unless database URLs are set)      |
-| `npm run test:coverage` | Coverage report with enforced thresholds                              |
-| `npm run db:generate`   | Generate migrations after schema changes                              |
-| `npm run db:migrate`    | Apply migrations (owner role)                                         |
-| `npm run db:rls`        | Apply row-level security and audit triggers                           |
-| `npm run db:studio`     | Drizzle Studio                                                        |
-| `npm run db:seed`       | Demo company with 50 employees and 6 months of payroll                |
-| `npm run e2e:smoke`     | Browser smoke test (app on port 3100, non-owner database role)        |
+| Missing | Behaviour |
+| --- | --- |
+| `GEMINI_API_KEY` | PayBot uses keyword engine; Document AI is manual entry with the same verification; policy search is keyword-only; generators fill standard templates |
+| Resend / WhatsApp keys | Steps recorded as *skipped (not configured)*, never faked |
+| Inngest | Work runs after the response; `/api/cron/tick` sweeps |
+| Upstash | In-memory rate limits (per process) |
+| Razorpay keys | Simulated payment provider |
+| pgvector | Full-text policy search |
 
-## Testing
+---
 
-**512 tests across 43 files**: unit, integration against a real Postgres as a non-owner role, and seeded-company invariants.
+## 📜 Scripts
 
-Coverage (with database attached): **81% statements, 83% lines, 79% functions, 68% branches.** `vitest.config.ts` enforces floors of 80 / 80 / 75 / 60, so CI fails if coverage drops.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run verify` | Typecheck, lint, tests and build |
+| `npm test` | Unit tests (DB tests skip without URLs) |
+| `npm run test:coverage` | Coverage with enforced floors |
+| `npm run db:generate` / `db:migrate` / `db:rls` | Schema workflow |
+| `npm run db:studio` | Drizzle Studio |
+| `npm run db:seed` | Demo company |
+| `npm run e2e:smoke` | Browser smoke test (port 3100, non-owner role) |
+
+---
+
+## ✅ Testing
+
+```
+512 tests · 43 files
+├── unit tests
+├── integration tests     real Postgres, non-owner role, RLS exercised
+└── seeded-company invariants
+```
 
 ```bash
-# Unit tests
 npm test
 
-# Integration tests (tenant isolation, audit chain concurrency, rollback)
+# Integration tests
 TEST_DATABASE_URL=postgresql://app_user:...@localhost:5432/payflow \
 TEST_DATABASE_OWNER_URL=postgresql://owner:...@localhost:5432/payflow \
 npm test
 ```
 
-- `TEST_DATABASE_URL` is the **app role**, so RLS is exercised.
-- `TEST_DATABASE_OWNER_URL` is the table owner, used only to seed and clean up, because immutability triggers block deletes for everyone else.
-- `tests/unit/access-guards.test.ts` fails the build if any server action, API route or admin page is added without a permission or session guard.
+- `TEST_DATABASE_URL` is the **app role** so RLS is exercised.
+- `TEST_DATABASE_OWNER_URL` seeds and cleans up only, because immutability triggers block deletes for everyone else.
+- Browser tests (`tests/e2e/phase2..9-smoke.mjs`, `password-reset-smoke.mjs`) need Playwright, a seeded database and the app on port 3100. Auth is rate limited, so scripts pause between runs. The Phase 9 run fails on any CSP violation. `password-reset-smoke.mjs` needs `E2E_DATABASE_URL` (owner connection).
 
-**Browser tests** (`tests/e2e/phase2..9-smoke.mjs`, `password-reset-smoke.mjs`) drive the real UI with Playwright. They need a seeded database and the app running on port 3100. Sign-in and sign-up are rate limited, so the scripts pause between runs. The Phase 9 run also fails on any Content-Security-Policy violation.
+---
 
-## Security
+## 🚢 CI/CD and Deployment
 
-- **CSP**: nonce-based (`src/lib/csp.ts`, set per request in `src/middleware.ts`) with `strict-dynamic`, no `unsafe-inline` for scripts, `frame-ancestors 'none'`, `object-src 'none'`, `form-action 'self'`. Additional headers: HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`.
-- **Access control**: every server action runs through `runAction` (permission check, transaction, audit entry), backed by RLS. A test enforces that no unguarded entry point is added.
-- **Data protection**: AES-256-GCM for sensitive fields, masked display, audited reveals, masked data exports.
-- **Rate limiting**: Better Auth limits stored in Postgres so they hold across instances; separate limits for API keys, webhooks, PayBot and password reset.
-- **SSRF protection**: outbound calls (webhooks, Slack, Teams) require https, refuse private, loopback, link-local and metadata addresses, and never follow redirects.
-- **API keys**: shown once, stored only as SHA-256 hashes, scoped, expiring, instantly revocable. Responses use explicit field allow-lists.
-- **Webhooks**: HMAC-SHA256 over `timestamp.body`, 5-minute replay window, encrypted signing secrets.
-- **Input handling**: Zod validation everywhere, magic-byte file checks, CSV formula neutralisation.
-- **Account safety**: neutral forgot-password responses to prevent account enumeration, single-use expiring reset links, sessions revoked everywhere on reset, SSO-enforced domains cannot use password reset.
-- **Dependencies**: `npm audit --omit=dev` reports no critical issues and CI fails on critical. Accepted advisories: `inngest` pulls a `zod` version with a high advisory (parses only our own payloads), `exceljs` pulls an old `uuid` (moderate), and `drizzle-kit`'s `esbuild` is dev-only. `postcss` is pinned via `overrides` and `next` is pinned to 15.5.29. Re-check before every release.
-- **Secrets**: a scan found none committed; real `.env*` files are git-ignored.
+**CI** (`.github/workflows/ci.yml`) runs the gate pipeline shown in [Quality Gates](#quality-gates) on every push and pull request.
 
-To report a vulnerability, please open a private security advisory on the repository rather than a public issue.
+**Vercel**
 
-## Performance
+1. Set the environment variables above.
+2. Apply migrations and RLS as the owner; use a non-owner role in `DATABASE_URL`.
+3. Schedule `GET /api/cron/tick` (Bearer `CRON_SECRET`) every 5 minutes, or configure Inngest.
+4. On serverless hosts an unawaited email send can be cut short. Prefer Node or Docker hosting for reliable delivery, or await the send.
 
-- First-load JS per route: **104-250 kB** (shared 103 kB). The heaviest are the payroll run page (charts and animation) and the workflow builder (React Flow, loaded only there).
-- Lighthouse (desktop, production build, local): landing **96-98** performance; login and sign-up **100**; accessibility **100**, SEO **100**, best practices **96-100**. LCP under one second.
-- Because every page carries a per-request CSP nonce, pages are rendered on demand rather than statically cached.
-- Authenticated pages were not audited by Lighthouse.
+Pages render on demand (not statically cached) because every response carries a per-request CSP nonce.
 
-## CI/CD and Deployment
+---
 
-`.github/workflows/ci.yml` runs on every push and pull request:
+## 🔌 Public API and Webhooks
 
-1. Format check, lint (zero warnings), typecheck
-2. `npm audit`
-3. Migrations and RLS applied to a pgvector Postgres with a non-owner app role
-4. Tests with coverage thresholds
-5. Production build
-6. Seeded browser smoke test (including CSP checks)
-7. Lighthouse CI on public pages
-8. Docker image build and boot check
-
-**Deploying to Vercel:** set the environment variables above, apply migrations and RLS to your database as the owner role, and use a non-owner role in `DATABASE_URL`. Point a scheduler at `GET /api/cron/tick` (Bearer `CRON_SECRET`) every 5 minutes, or configure Inngest. On serverless hosts, unawaited email sends can be cut short; prefer Node or Docker hosting for reliable delivery, or await the send.
-
-## Public API and Webhooks
-
-Read-only REST API at `/api/v1` for employees, payroll runs, leave requests and attendance. Create keys at `/developers`; the OpenAPI spec is served at `/api/v1/openapi.json`.
+Read-only REST API at `/api/v1`: employees, payroll runs, leave requests, attendance. Create keys at `/developers`; spec at `/api/v1/openapi.json`.
 
 ```bash
 curl https://payflow-five-nu.vercel.app/api/v1/employees \
@@ -343,74 +805,98 @@ curl https://payflow-five-nu.vercel.app/api/v1/employees \
 
 - Amounts are integer paise.
 - Bank, PAN, Aadhaar, UAN and ESI numbers are never returned.
-- Rate limit exceeded returns `429` with `Retry-After` and `X-RateLimit-*` headers.
+- Over limit returns `429` with `Retry-After` and `X-RateLimit-*` headers.
 
-Webhook events: `leave.applied`, `payroll.approved`, `employee.joined`, `deadline.near`, `payroll.paid`. Verify the `X-PayFlow-Signature` header using the example on the Developers page. Failed deliveries retry at 1m, 5m, 30m, 2h and 8h, then can be resent manually.
+**Webhook events:** `leave.applied`, `payroll.approved`, `employee.joined`, `deadline.near`, `payroll.paid`.
 
-## Project Status
+Verify the `X-PayFlow-Signature` header (HMAC-SHA256 over `timestamp.body`, 5-minute window); an example verifier is on the Developers page.
 
-| Phase | Scope                                                                             | State |
-| ----- | --------------------------------------------------------------------------------- | ----- |
-| 1     | Setup, design system, schema, auth, RBAC, multi-tenancy                           | Done  |
-| 2     | Org setup, employees, salary structure                                            | Done  |
-| 3     | Payroll engine, statutory deductions, payslips, payments                          | Done  |
-| 4     | Attendance, leave, expenses, tax declarations, reports                            | Done  |
-| 5     | Dashboards, polish, landing page                                                  | Done  |
-| 6     | AI layer: PayBot, Payroll Copilot, explainers                                     | Done  |
-| 7     | Agentic Copilot, policy RAG, Document AI, voice, generators                       | Done  |
-| 8     | Automation, public API, webhooks, live notifications                              | Done  |
-| 9     | Simulator, EWA, analytics, engagement, enterprise, privacy, PWA, Hindi, demo seed | Done  |
-| 10    | Test coverage, security hardening, performance, CI/CD, documentation              | Done  |
+---
 
-## Known Limitations
+## 🗓 Roadmap and Status
 
-This project is explicit about what has and has not been verified. **Review this list before any production use.**
+All ten planned phases are complete.
+
+```mermaid
+gantt
+    title Delivery phases
+    dateFormat  X
+    axisFormat  Phase %s
+    section Core
+    1 Foundation, auth, RBAC, tenancy      :done, 0, 1
+    2 Org, employees, salary structures    :done, 1, 2
+    3 Payroll engine and payments          :done, 2, 3
+    4 Attendance, leave, tax, reports      :done, 3, 4
+    5 Dashboards and landing page          :done, 4, 5
+    section Intelligence and scale
+    6 PayBot, Copilot, explainers          :done, 5, 6
+    7 Agentic actions, RAG, Document AI    :done, 6, 7
+    8 Automation, API, webhooks            :done, 7, 8
+    9 Simulator, EWA, analytics, PWA       :done, 8, 9
+    10 Hardening, CI/CD, docs              :done, 9, 10
+```
+
+### Candidate next steps
+
+- Real SAML via a verified identity provider
+- TRACES-signed Form 16 and per-state PT due dates
+- Trained attrition model replacing the rule-based score
+- Live bank-verification and e-sign integrations
+- Native-reviewed Hindi across all screens
+- Postgres LISTEN/NOTIFY for instant notifications
+
+---
+
+## ⚠️ Known Limitations
+
+This project states plainly what is and is not verified. **Review before any production use.**
 
 **Statutory data to verify before real use**
-- PF ceiling change date (Sep 2026), Professional Tax slabs (`src/lib/payroll/pt.ts`), and surcharge and slab rates.
-- PT due dates use a generic default (15th of the next month).
-- 80D is modelled as Rs 25,000 + Rs 25,000 without senior-citizen limits. Overtime pay is Basic/26/8 x 2.
+- PF ceiling change date (Sep 2026), Professional Tax slabs (`src/lib/payroll/pt.ts`), surcharge and slab rates.
+- PT due dates use a generic default (15th of next month).
+- 80D modelled as Rs 25,000 + Rs 25,000 without senior-citizen limits. Overtime pay is Basic/26/8 × 2.
 - The Form 16 download is a **summary**, not the TRACES-signed certificate.
 
 **Not implemented or simulated**
-- **SAML SSO is not implemented.** Google and Microsoft sign-in work only when client IDs are set.
+- **SAML is not implemented.** Google/Microsoft sign-in works only when client IDs are set.
 - **Earned wage access payouts are a mock.** No money moves.
-- Employee e-sign and bank-verification onboarding steps are tasks for a person, not a legal e-signature or verification service.
+- E-sign and bank-verification onboarding steps are tasks for a person, not legal services.
 - Multi-currency is display-only; payroll, payslips and returns are always INR.
-- Attrition risk is a rule-based score, not a trained model. No market salary data is bundled.
+- Attrition risk is a transparent rule-based score, not a trained model. No market salary data is bundled.
+- Sentiment labels in surveys use a simple word-list scorer.
 
 **Not verified in the build environment**
-- Gemini (chat, embeddings, Vision, generators), Inngest, Resend and WhatsApp delivery, and the Razorpay adapter beyond simulation. Test Razorpay in test mode first.
+- Gemini (chat, embeddings, Vision, generators), Inngest, Resend, WhatsApp, and the Razorpay adapter beyond simulation (test in Razorpay test mode first).
 - pgvector semantic-search SQL (keyword search is tested end to end).
 - The GitHub Actions run itself and the Docker image build (the standalone server was booted and served `/login` with its CSP and a healthy `/api/health`).
-- The PWA on a real phone, browser voice input, and Hindi copy (written without a native reviewer; only the app shell, attendance panel and privacy page are translated).
+- The PWA on a real phone, browser voice input, and Hindi copy (only the app shell, attendance panel and privacy page are translated, without a native reviewer).
 
 **Behavioural notes**
-- `payroll.paid` webhooks are delivered on the next sweep (minutes), not instantly. The SSE stream polls every 4 seconds per open tab.
-- Rate limiting for PayBot is per-process unless Upstash is configured.
+- `payroll.paid` webhooks are delivered on the next sweep (minutes). The SSE stream polls every 4 seconds per open tab.
+- PayBot rate limiting is per process unless Upstash is configured.
 - Scanned PDFs have no text layer and are refused for policy upload.
 - Generated letters are drafts, not legal advice.
-- The Phase 5 notification-bell E2E step failed intermittently (2 of 4 runs) with a likely race between the live-notification refresh and the read refresh; the underlying action works in isolation and the race has not been fixed.
+- A Phase 5 notification-bell E2E step failed intermittently (2 of 4 runs), likely a race between live-notification refresh and the read refresh. The action works in isolation; the race is unfixed.
 
-## Contributing
+---
 
-1. Fork the repository and create a feature branch.
-2. Make your changes with tests. New server actions, API routes and admin pages must carry a permission or session guard (the access-guard test will fail otherwise).
-3. Run `npm run verify` and make sure it passes.
+## 🤝 Contributing
+
+1. Fork and create a feature branch.
+2. Add tests. New server actions, API routes and admin pages **must** carry a permission or session guard, or `access-guards.test.ts` fails.
+3. Run `npm run verify`.
 4. Open a pull request describing the change and any statutory or security implications.
 
-## License
+## 📄 License
 
-Add your license here (for example MIT) and include a `LICENSE` file in the repository root.
+Add your license (for example MIT) and a `LICENSE` file in the repository root.
 
-## Author
+## 👤 Author
 
-**Suraj Purai**
-
-Built as a full-stack, multi-phase project covering payroll compliance, multi-tenant security, AI and automation.
+**Suraj Singh Rajput**
 
 ---
 
 <div align="center">
-<sub>PayFlow is a software project and does not constitute tax, legal or financial advice. Verify statutory rules with a qualified professional before running real payroll.</sub>
+<sub>PayFlow is software, not tax, legal or financial advice. Verify statutory rules with a qualified professional before running real payroll.</sub>
 </div>
